@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using music_manager_starter.Data;
+using music_manager_starter.Server.Services;
 using Serilog;
 using Serilog.Events;
 using System.Security.AccessControl;
@@ -38,6 +39,7 @@ try
 
     builder.Services.AddControllersWithViews();
     builder.Services.AddRazorPages();
+    builder.Services.AddScoped<IFileService, FileService>();
 
     var app = builder.Build();
 
