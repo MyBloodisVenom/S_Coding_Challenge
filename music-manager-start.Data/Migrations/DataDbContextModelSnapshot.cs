@@ -7,7 +7,7 @@ using music_manager_starter.Data;
 
 #nullable disable
 
-namespace music_manager_starter.Data.Migrations
+namespace music_manager_start.Data.Migrations
 {
     [DbContext(typeof(DataDbContext))]
     partial class DataDbContextModelSnapshot : ModelSnapshot
@@ -25,6 +25,9 @@ namespace music_manager_starter.Data.Migrations
 
                     b.Property<string>("Album")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlbumArtUrl")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Artist")

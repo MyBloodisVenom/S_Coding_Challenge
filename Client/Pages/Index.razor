@@ -4,62 +4,144 @@
 @inject HttpClient Http
 
 @code {
-    private List<Song> songs;
+   private List<Song> songs;
 
-    protected override async Task OnInitializedAsync()
-    {
-        songs = await Http.GetFromJsonAsync<List<Song>>("api/songs");
-    }
+   protected override async Task OnInitializedAsync()
+   {
+       songs = await Http.GetFromJsonAsync<List<Song>>("api/songs");
+   }
+
+   private async Task HandleFileSelected(InputFileChangeEventArgs e, Song song)
+   {
+       try
+       {
+           var file = e.File;
+           var content = new MultipartFormDataContent();
+           var fileContent = new StreamContent(file.OpenReadStream());
+           content.Add(fileContent, "file", file.Name);
+
+           var response = await Http.PostAsync($"api/songs/upload-art/{song.Id}", content);
+           if (response.IsSuccessStatusCode)
+           {
+               // Refresh the songs list
+               songs = await Http.GetFromJsonAsync<List<Song>>("api/songs");
+           }
+       }
+       catch (Exception ex)
+       {
+           Console.WriteLine(ex);
+       }
+   }
+
+   private async Task DeleteSong(Song song)
+   {
+       if (await Http.DeleteAsync($"api/songs/{song.Id}") is HttpResponseMessage response && response.IsSuccessStatusCode)
+       {
+           songs = await Http.GetFromJsonAsync<List<Song>>("api/songs");
+       }
+   }
+
+   private async Task DeleteAlbumArt(Song song)
+   {
+       if (await Http.DeleteAsync($"api/songs/delete-art/{song.Id}") is HttpResponseMessage response && response.IsSuccessStatusCode)
+       {
+           songs = await Http.GetFromJsonAsync<List<Song>>("api/songs");
+       }
+   }
 }
 
 <div class="p-0 min-h-screen bg-pattern flex flex-col items-center justify-center">
-    <h2 class="text-3xl font-bold text-white mb-8 text-center">Song Library</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-        @if (songs != null && songs.Count > 0)
-        {
-            @foreach (var song in songs)
-            {
-                <div class="glass p-6 border border-gray-300 rounded-lg text-white transition-transform transform hover:scale-105 hover:shadow-xl cursor-pointer">
-                    <h3 class="text-xl font-semibold mb-2">@song.Title</h3>
-                    <p class="text-md">Artist: <span class="font-light">@song.Artist</span></p>
-
-                </div>
-            }
-        }
-        else
-        {
-            <div class="col-span-1 text-center text-gray-400">No songs found.</div>
-        }
-    </div>
+   <h2 class="text-3xl font-bold text-white mb-8 text-center">Song Library</h2>
+   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+       @if (songs != null && songs.Count > 0)
+       {
+           @foreach (var song in songs)
+           {
+               <div class="glass p-6 border border-gray-300 rounded-lg text-white transition-transform transform hover:scale-105 hover:shadow-xl">
+                   <div class="relative">
+                       @if (!string.IsNullOrEmpty(song.AlbumArtUrl))
+                       {
+                           <div class="w-full h-48 mb-4 overflow-hidden rounded group relative">
+                               <img src="@song.AlbumArtUrl" 
+                                    alt="@song.Album cover" 
+                                    class="w-full h-full object-contain bg-black" />
+                               <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center space-y-2">
+                                   <InputFile OnChange="@(e => HandleFileSelected(e, song))" 
+                                            class="hidden" 
+                                            id="@($"file-{song.Id}")" 
+                                            accept=".jpg,.jpeg,.png" />
+                                   <label for="@($"file-{song.Id}")" 
+                                          class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 cursor-pointer">
+                                       Change Art
+                                   </label>
+                                   <button @onclick="() => DeleteAlbumArt(song)"
+                                           class="px-4 py-2 bg-red-600 rounded hover:bg-red-700">
+                                       Remove Art
+                                   </button>
+                               </div>
+                           </div>
+                       }
+                       else
+                       {
+                           <div class="w-full h-48 mb-4 bg-gray-700 rounded flex items-center justify-center relative">
+                               <InputFile OnChange="@(e => HandleFileSelected(e, song))" 
+                                        class="hidden" 
+                                        id="@($"file-{song.Id}")" 
+                                        accept=".jpg,.jpeg,.png" />
+                               <label for="@($"file-{song.Id}")" 
+                                      class="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-gray-600 transition-colors">
+                                   <span class="text-gray-400">Add Album Art</span>
+                               </label>
+                           </div>
+                       }
+                   </div>
+                   <div class="flex justify-between items-start">
+                       <div>
+                           <h3 class="text-xl font-semibold mb-2">@song.Title</h3>
+                           <p class="text-md">Artist: <span class="font-light">@song.Artist</span></p>
+                       </div>
+                       <button @onclick="() => DeleteSong(song)" 
+                               class="text-red-500 hover:text-red-700 p-1">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                               <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                           </svg>
+                       </button>
+                   </div>
+               </div>
+           }
+       }
+       else
+       {
+           <div class="col-span-1 text-center text-gray-400">No songs found.</div>
+       }
+   </div>
 </div>
 
 <style>
-    .bg-pattern {
-        background: linear-gradient( rgba(31, 41, 55, 0.7), rgba(31, 41, 55, 0.7) ), url('dalle.webp');
-        background-size: cover;
-        background-position: center;
-        font-family: 'Rajdhani', sans-serif;
-    }
+   .bg-pattern {
+       background: linear-gradient( rgba(31, 41, 55, 0.7), rgba(31, 41, 55, 0.7) ), url('dalle.webp');
+       background-size: cover;
+       background-position: center;
+       font-family: 'Rajdhani', sans-serif;
+   }
 
- 
+   .glass {
+       background: rgba(255, 255, 255, 0.1);
+       backdrop-filter: blur(10px); 
+       border-radius: 10px; 
+       position: relative; 
+       overflow: hidden; 
+   }
 
-    .glass {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px); 
-        border-radius: 10px; 
-        position: relative; 
-        overflow: hidden; 
-    }
-
-        .glass:before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            pointer-events: none; 
-        }
+   .glass:before {
+       content: '';
+       position: absolute;
+       top: 0;
+       left: 0;
+       right: 0;
+       bottom: 0;
+       border: 2px solid rgba(255, 255, 255, 0.2);
+       border-radius: 10px;
+       pointer-events: none; 
+   }
 </style>
