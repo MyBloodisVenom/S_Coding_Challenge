@@ -129,5 +129,39 @@ namespace music_manager_starter.Server.Controllers
                }
            }
        }
+
+       [HttpDelete("{id}")]
+       public async Task<IActionResult> DeleteSong(Guid id)
+       {
+           using (LogContext.PushProperty("Endpoint", "DeleteSong"))
+           {
+               try
+               {
+                   var song = await _context.Songs.FindAsync(id);
+                   if (song == null)
+                   {
+                       _logger.LogWarning("Attempted to delete non-existent song: {Id}", id);
+                       return NotFound("Song not found");
+                   }
+
+                   // Delete album art if exists
+                   if (!string.IsNullOrEmpty(song.AlbumArtUrl))
+                   {
+                       _fileService.DeleteFile(song.AlbumArtUrl);
+                   }
+
+                   _context.Songs.Remove(song);
+                   await _context.SaveChangesAsync();
+
+                   _logger.LogInformation("Successfully deleted song {SongId}", id);
+                   return Ok();
+               }
+               catch (Exception ex)
+               {
+                   _logger.LogError(ex, "Error deleting song {SongId}", id);
+                   return StatusCode(500, "Error deleting song");
+               }
+           }
+       }
    }
 }
