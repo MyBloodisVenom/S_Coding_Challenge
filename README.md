@@ -18,4 +18,4 @@ Use the latest version of Visual Studio 2022: https://visualstudio.microsoft.com
 
 Install the node packages before building the solution by using ```npm install``
 
-
+Edited by Salmaan Ejaz
