@@ -8,10 +8,10 @@ using music_manager_starter.Data;
 
 #nullable disable
 
-namespace music_manager_starter.Data.Migrations
+namespace music_manager_start.Data.Migrations
 {
     [DbContext(typeof(DataDbContext))]
-    [Migration("20241001032441_InitialMigration")]
+    [Migration("20241219091407_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -28,6 +28,9 @@ namespace music_manager_starter.Data.Migrations
 
                     b.Property<string>("Album")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlbumArtUrl")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Artist")

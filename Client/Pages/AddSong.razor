@@ -1,7 +1,7 @@
 ﻿@page "/AddSong"
 @inject HttpClient Http
+@inject ILogger<AddSong> Logger
 @using music_manager_starter.Shared
-
 
 <div class="p-6">
     <h2 class="text-xl font-semibold text-white">Add New Song</h2>
@@ -29,6 +29,11 @@
             <InputText @bind-Value="newSong.Genre" class="mt-1 block w-full p-2 border rounded" />
         </div>
 
+        <div class="mb-4">
+            <label class="block text-gray-200">Album Art</label>
+            <InputFile OnChange="HandleFileSelected" class="mt-1 block w-full p-2 border rounded text-white" accept=".jpg,.jpeg,.png" />
+        </div>
+
         <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded">Add Song</button>
     </EditForm>
 
@@ -39,19 +44,69 @@
 </div>
 
 @code {
-    private Song newSong = new Song();
-    private string message;
+    private Song newSong = new Song
+    {
+        Title = "",
+        Artist = "",
+        Album = "",
+        Genre = ""
+    };
+    private string? message;
+    private IBrowserFile? albumArtFile;
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        albumArtFile = e.File;
+    }
 
     private async Task HandleValidSubmit()
     {
-        var response = await Http.PostAsJsonAsync("api/songs", newSong);
-        if (response.IsSuccessStatusCode)
+        try
         {
-            message = "Song added successfully!";
-            newSong = new Song(); 
+            var response = await Http.PostAsJsonAsync("api/songs", newSong);
+            if (response.IsSuccessStatusCode)
+            {
+                var createdSong = await response.Content.ReadFromJsonAsync<Song>();
+                
+                if (albumArtFile != null && createdSong != null)
+                {
+                    var content = new MultipartFormDataContent();
+                    var fileContent = new StreamContent(albumArtFile.OpenReadStream());
+                    content.Add(fileContent, "file", albumArtFile.Name);
+
+                    var artResponse = await Http.PostAsync($"api/songs/upload-art/{createdSong.Id}", content);
+                    if (artResponse.IsSuccessStatusCode)
+                    {
+                        message = "Song and album art added successfully!";
+                    }
+                    else
+                    {
+                        message = "Song added but album art upload failed.";
+                    }
+                }
+                else
+                {
+                    message = "Song added successfully!";
+                }
+                
+                // Reset form
+                newSong = new Song
+                {
+                    Title = "",
+                    Artist = "",
+                    Album = "",
+                    Genre = ""
+                };
+                albumArtFile = null;
+            }
+            else
+            {
+                message = "Error adding song. Please try again.";
+            }
         }
-        else
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Error adding song");
             message = "Error adding song. Please try again.";
         }
     }
